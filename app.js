@@ -1,9 +1,7 @@
 ﻿//npm init -y
 //npm i express body-parser ejs
 //npm i mongoose
-//npm i mongoose-encryption
-// npm i dotenv
-import 'dotenv/config';     //no need to declare constant for it        //must be at top
+// npm i md5        to hash fnc
 
 //create .env file in root directory of project->hidden file
 //this .env file must be in .gitignore
@@ -14,13 +12,10 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import ejs from 'ejs';
 import mongoose from 'mongoose';
-import encrypt from 'mongoose-encryption';
+import md5 from 'md5';
 
 const app = express();
 const port = 3000;
-
-//.ev file:SECRET=Thisisalongstringforlevel2encryption
-console.log(process.env.SECRET)
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -53,10 +48,6 @@ const userSchema = new mongoose.Schema({
     password: String,
 });
 
-//to pass single secret string 
-//this key must be hidden- use environment variables->dotenv npm package    
-userSchema.plugin(encrypt, { secret: process.env.SECRET, encryptedFields: ['password'] });     //encrypt only password field
-
 //create model
 const user = mongoose.model("user", userSchema);
 
@@ -67,7 +58,8 @@ app.post('/register', async (req, res) => {
     //create new user
     const newUser = new user({
         email: req.body.email,
-        password: req.body.password,
+        //store hashed password in db
+        password: md5(req.body.password),
     })
 
     //save & render
@@ -88,20 +80,23 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res)=>{
     //render secret page only when login with correct email&pass
     const emailInput = req.body.email;
-    const passInput = req.body.password;
+    //convert user entered password into hashed password
+    const passInput = md5(req.body.password);
 
     try{
-        const userFound=await user.find({ email: emailInput });
+        const userFound=await user.findOne({ email: emailInput });
         if (userFound) {
             if (userFound.password === passInput) {
                 res.render("secret");
             }
             else {
-                console.log("incorrect password enetered!");
+                console.log("incorrect password entered!");
+                res.redirect('/login');
             }
         }
         else {
             console.log("You r not registered!");
+            res.redirect('/register');
         }
     }
     catch(err){
@@ -113,14 +108,3 @@ app.post('/login', async (req, res)=>{
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`)
 })
-
-// steps to add to github from VS code
-// git init
-// git status
-// git add .
-// git status
-// git commit -m "Level-2 Authentication with environment variables"
-// git log
-// git remote add origin git@github.com:akshiita07/Authentication-Security.git   // git remote add origin _ssh link__
-// enter key paraphrase:
-// git push -u origin main

@@ -1,20 +1,19 @@
-<<<<<<< HEAD
-﻿<%- include("partials/header") %>
+<%- include("partials/header") %>
 
 
     <div class="container">
         <h1 class="display-1 fw-bold mb-3">Login</h1>
 
-        <div class="card"  style="width: 40rem;">
+        <div class="card" style="width: 40rem;">
             <div class="card-body">
                 <form action="/login" method="post">
                     <div class="mb-3">
                         <label for="exampleInputEmail1" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                        <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="email">
                     </div>
                     <div class="mb-3">
                         <label for="exampleInputPassword1" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="exampleInputPassword1">
+                        <input type="password" class="form-control" id="exampleInputPassword1" name="password">
                     </div>
                     <button type="submit" class="btn btn-primary">Login</button>
 
@@ -24,31 +23,4 @@
 
     </div>
 
-=======
-﻿<%- include("partials/header") %>
-
-
-    <div class="container">
-        <h1 class="display-1 fw-bold mb-3">Login</h1>
-
-        <div class="card"  style="width: 40rem;">
-            <div class="card-body">
-                <form action="/login" method="post">
-                    <div class="mb-3">
-                        <label for="exampleInputEmail1" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
-                    </div>
-                    <div class="mb-3">
-                        <label for="exampleInputPassword1" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="exampleInputPassword1">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Login</button>
-
-                </form>
-            </div>
-        </div>
-
-    </div>
-
->>>>>>> bc84ec237443416cf231302e4aba37b8a415ae1d
     <%- include("partials/footer") %>
