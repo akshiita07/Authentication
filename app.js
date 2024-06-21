@@ -1,12 +1,13 @@
-﻿
-﻿//npm init -y
+﻿﻿//npm init -y
 //npm i express body-parser ejs
 //npm i mongoose
+//npm i mongoose-encryption
 
 import express from 'express';
 import bodyParser from 'body-parser';
 import ejs from 'ejs';
 import mongoose from 'mongoose';
+import encrypt from 'mongoose-encryption';
 
 const app = express();
 const port = 3000;
@@ -36,11 +37,15 @@ mongoose.connect("mongodb://127.0.0.1:27017/userdb")
         console.error('Error connecting to MongoDB:', err);
     });
 
-//create schema
-const userSchema = {
+//create schema as mongoose schema for LEVEL-2
+const userSchema = new mongoose.Schema({
     email: String,
     password: String,
-}
+});
+
+//to pass single secret string
+var secret = "Thisisalongstringforlevel2encryption";
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });     //encrypt only password field
 
 //create model
 const user = mongoose.model("user", userSchema);
