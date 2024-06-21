@@ -1,7 +1,14 @@
-﻿﻿//npm init -y
+﻿//npm init -y
 //npm i express body-parser ejs
 //npm i mongoose
 //npm i mongoose-encryption
+// npm i dotenv
+import 'dotenv/config';     //no need to declare constant for it        //must be at top
+
+//create .env file in root directory of project->hidden file
+//this .env file must be in .gitignore
+
+//add environment variables in form of name=value
 
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -11,6 +18,9 @@ import encrypt from 'mongoose-encryption';
 
 const app = express();
 const port = 3000;
+
+//.ev file:SECRET=Thisisalongstringforlevel2encryption
+console.log(process.env.SECRET)
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -43,9 +53,9 @@ const userSchema = new mongoose.Schema({
     password: String,
 });
 
-//to pass single secret string
-var secret = "Thisisalongstringforlevel2encryption";
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });     //encrypt only password field
+//to pass single secret string 
+//this key must be hidden- use environment variables->dotenv npm package    
+userSchema.plugin(encrypt, { secret: process.env.SECRET, encryptedFields: ['password'] });     //encrypt only password field
 
 //create model
 const user = mongoose.model("user", userSchema);
@@ -103,3 +113,14 @@ app.post('/login', async (req, res)=>{
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`)
 })
+
+// steps to add to github from VS code
+// git init
+// git status
+// git add .
+// git status
+// git commit -m "Level-2 Authentication with environment variables"
+// git log
+// git remote add origin git@github.com:akshiita07/Authentication-Security.git   // git remote add origin _ssh link__
+// enter key paraphrase:
+// git push -u origin main
