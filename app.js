@@ -1,7 +1,7 @@
 ﻿//npm init -y
 //npm i express body-parser ejs
 //npm i mongoose
-// npm i md5        to hash fnc
+// npm i bcrypt          for hash fnc
 
 //create .env file in root directory of project->hidden file
 //this .env file must be in .gitignore
@@ -12,7 +12,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import ejs from 'ejs';
 import mongoose from 'mongoose';
-import md5 from 'md5';
+import bcrypt from 'bcrypt';
+const saltRounds = 10;      //for salting
 
 const app = express();
 const port = 3000;
@@ -55,51 +56,45 @@ const user = mongoose.model("user", userSchema);
 app.post('/register', async (req, res) => {
     //render secret page only when registered/login
 
-    //create new user
-    const newUser = new user({
-        email: req.body.email,
-        //store hashed password in db
-        password: md5(req.body.password),
-    })
+    bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+        //create new user
+        const newUser = new user({
+            email: req.body.email,
+            //store hashed password in db
+            password: hash,     //from bcrypt
+        })
 
-    //save & render
-    try {
-        await newUser.save()
-            .then(function () {
-                res.render("secret");
-            })
-            .catch(function (err) {
-                console.log("Error occurred " + err);
-            });
-    } catch (err) {
-        console.log("Error occurred: " + err);
-    }
-
+        //save & render
+        newUser.save()
+                .then(function () {
+                    res.render("secret");
+                })
+                .catch(function (err) {
+                    console.log("Error occurred " + err);
+                });
+    });
 });
 
-app.post('/login', async (req, res)=>{
+app.post('/login', async (req, res) => {
     //render secret page only when login with correct email&pass
     const emailInput = req.body.email;
-    //convert user entered password into hashed password
-    const passInput = md5(req.body.password);
+    const passInput = req.body.password;
 
-    try{
-        const userFound=await user.findOne({ email: emailInput });
+    try {
+        const userFound = await user.findOne({ email: emailInput });
         if (userFound) {
-            if (userFound.password === passInput) {
-                res.render("secret");
-            }
-            else {
-                console.log("incorrect password entered!");
-                res.redirect('/login');
-            }
+            bcrypt.compare(passInput, userFound.password, function (err, result) {
+                if(result===true){
+                    res.render("secret");
+                }
+            });
         }
         else {
             console.log("You r not registered!");
             res.redirect('/register');
         }
     }
-    catch(err){
+    catch (err) {
         console.log("Error occurred " + err);
     }
 
