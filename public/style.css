@@ -16,3 +16,17 @@ body {
     color: white;
     padding: 10px 10px;
 }
+
+.btn-google{
+    margin-top: 20px;
+}
+
+/* .google-login .btn{
+    
+    background: linear-gradient(to right, #4285F4, #34A853, #FBBC05, #EA4335);
+}
+
+body > div > div.card-body.google-login>a:hover{
+    background: whitesmoke !important;
+    font-weight: bold;
+} */

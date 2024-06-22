@@ -11,6 +11,15 @@ import passport from 'passport';
 import passportLocalMongoose from 'passport-local-mongoose';
 import session from 'express-session';
 
+// npm i dotenv
+import 'dotenv/config'
+
+//OAuth passport 2.0 version
+// npm install passport-google-oauth20
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+
+//npm i mongoose-findorcreate
+import findOrCreate from 'mongoose-findorcreate';
 
 const app = express();
 const port = 3000;
@@ -23,7 +32,8 @@ app.use(express.static('public'));
 //for express-session 👇🏻:
 app.use(session({
     //secret is a long string that will be stored in our .env file
-    secret: 'Thisislongstring.',
+    secret: "Thisisalongstring",
+    // secret: process.env.SECRET,
     resave: false,                  //Forces the session to be saved back to the session store
     saveUninitialized: false,       //to implement login sessions
 }));
@@ -44,12 +54,16 @@ mongoose.connect("mongodb://127.0.0.1:27017/userdb")
 
 //create schema as mongoose schema for LEVEL-2
 const userSchema = new mongoose.Schema({
-    username: String,
+    email: String,
     password: String,
+    //we must have id for google authentication
+    googleId: String,
 });
 
 //set up passport-local-mongoose as a plugin 👇🏻 to hash & salt passowrd  & save users to mongodb db
 userSchema.plugin(passportLocalMongoose)
+//set up findOrCreate mongoose as a plugin 👇🏻
+userSchema.plugin(findOrCreate);
 
 //create model
 const User = mongoose.model("User", userSchema);
@@ -57,13 +71,53 @@ const User = mongoose.model("User", userSchema);
 //passport-local-mongoose documentation  👇🏻
 
 passport.use(User.createStrategy());                // create Strategy
-passport.serializeUser(User.serializeUser());       //serialize:creates cookie & user identification
-passport.deserializeUser(User.deserializeUser());   //crumble cookie & discover cookie deetails inside
+passport.serializeUser(function (user, done) {
+    done(null, user.id)
+});       //serialize:creates cookie & user identification
 
+
+passport.deserializeUser(function (id, done) {
+    User.findById(id).then(function (user) {
+        done(null, user);
+    }).catch(function (err) {
+        done(err, null);
+    });
+});     //crumble cookie & discover cookie deetails inside
+
+//after passport serialize & deserailze- add passport.use for google OAuth
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,                        //paste from google auth from .env file
+    clientSecret: process.env.CLIENT_SECRET,                //paste from google auth from .env file
+    callbackURL: "http://localhost:3000/auth/google/secret" //paste redirect url
+},
+    function (accessToken, refreshToken, profile, cb) {
+        //profile will contain email
+        console.log("\nGoogle send this profile: ");
+        console.log(profile);
+        //mongoose findOrCreate package
+        User.findOrCreate({ googleId: profile.id }, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
 
 app.get('/', (req, res) => {
     res.render("home");       //set app.view as ejs
 })
+
+//to login with google a: /auth/google
+app.get('/auth/google',
+    //initiate authentication with google 
+    passport.authenticate('google', { scope: ['profile'] }));//not "local" strategy but "google"
+
+
+//to rediect after google authentication
+app.get('/auth/google/secret',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    function (req, res) {
+        // Successful authentication, redirect .
+        res.redirect('/secret');
+    });
 
 app.get('/register', (req, res) => {
     res.render("register");       //set app.view as ejs
@@ -86,13 +140,13 @@ app.get('/secret', (req, res) => {
 });
 
 // to logout:
-app.get('/logout',function(req,res){
+app.get('/logout', function (req, res) {
     //deauthenticate user & end user session
-    req.logOut(function(err){
-        if(err){
+    req.logOut(function (err) {
+        if (err) {
             console.log(err);
         }
-        else{
+        else {
             res.redirect('/');  //home page
         }
     });
@@ -103,7 +157,7 @@ app.post('/register', async (req, res) => {
     //render secret page only when registered/login
 
     //from passport-local-mongoose documentation  👇🏻
-    User.register({ username: req.body.username}, req.body.password, function (err, user) {
+    User.register({ username: req.body.username }, req.body.password, function (err, user) {
         if (err) {
             console.log("Error occurred " + err);
             res.redirect('/register');
