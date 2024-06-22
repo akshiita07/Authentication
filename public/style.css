@@ -20,6 +20,9 @@ body {
 .btn-google{
     margin-top: 20px;
 }
+.btn-facebook{
+    margin-top: 20px;
+}
 
 /* .google-login .btn{
     
@@ -30,3 +33,14 @@ body > div > div.card-body.google-login>a:hover{
     background: whitesmoke !important;
     font-weight: bold;
 } */
+
+#userSecret{
+    width: 100%;
+    border: none;
+    outline: none;
+    margin-bottom: 20px;
+    text-align: center;
+}
+#userSecret::placeholder{
+    text-align: center;
+}

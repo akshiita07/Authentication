@@ -1,0 +1,15 @@
+﻿<%- include("partials/header") %>
+
+    <div class="jumbotron center">
+        <div class="container">
+            <i class="fas fa-key fa-6x"></i>
+            <h1 class="display-1 fw-bold">Submit your Secret</h1>
+            <p class=" fs-4 secret-text">Don't keep your secrets! Post them anonymously 🤫</p>
+            <form action="/submitSecret" method="post">
+                <input type="text" name="userSecret" id="userSecret" placeholder="What's your secret?" autofocus
+                    autocomplete="off">
+                <button class="btn btn-dark btn-lg" type="submit">Submit a Secret</button>
+            </form>
+        </div>
+    </div>
+    <%- include("partials/footer") %>

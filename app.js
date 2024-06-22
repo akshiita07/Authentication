@@ -21,6 +21,9 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 //npm i mongoose-findorcreate
 import findOrCreate from 'mongoose-findorcreate';
 
+// npm install passport-facebook
+import FacebookStrategy from 'passport-facebook';
+
 const app = express();
 const port = 3000;
 
@@ -32,8 +35,7 @@ app.use(express.static('public'));
 //for express-session 👇🏻:
 app.use(session({
     //secret is a long string that will be stored in our .env file
-    secret: "Thisisalongstring",
-    // secret: process.env.SECRET,
+    secret: process.env.SECRET,
     resave: false,                  //Forces the session to be saved back to the session store
     saveUninitialized: false,       //to implement login sessions
 }));
@@ -54,10 +56,13 @@ mongoose.connect("mongodb://127.0.0.1:27017/userdb")
 
 //create schema as mongoose schema for LEVEL-2
 const userSchema = new mongoose.Schema({
+    username: String,
     email: String,
     password: String,
     //we must have id for google authentication
     googleId: String,
+    // save secret when user submits a secret
+    secret: String,
 });
 
 //set up passport-local-mongoose as a plugin 👇🏻 to hash & salt passowrd  & save users to mongodb db
@@ -85,9 +90,10 @@ passport.deserializeUser(function (id, done) {
 });     //crumble cookie & discover cookie deetails inside
 
 //after passport serialize & deserailze- add passport.use for google OAuth
+//go to google developers
 passport.use(new GoogleStrategy({
-    clientID: process.env.CLIENT_ID,                        //paste from google auth from .env file
-    clientSecret: process.env.CLIENT_SECRET,                //paste from google auth from .env file
+    clientID: process.env.GOOG_CLIENT_ID,                        //paste from google auth from .env file
+    clientSecret: process.env.GOOG_CLIENT_SECRET,                //paste from google auth from .env file
     callbackURL: "http://localhost:3000/auth/google/secret" //paste redirect url
 },
     function (accessToken, refreshToken, profile, cb) {
@@ -95,7 +101,24 @@ passport.use(new GoogleStrategy({
         console.log("\nGoogle send this profile: ");
         console.log(profile);
         //mongoose findOrCreate package
-        User.findOrCreate({ googleId: profile.id }, function (err, user) {
+        User.findOrCreate({
+            googleId: profile.id,
+            username: profile.emails[0].value
+        }, function (err, user) {
+            return cb(err, user);
+        });
+    }
+));
+
+passport.use(new FacebookStrategy({
+    //go to facebook developers
+    clientID: process.env.FB_CLIENT_ID,
+    clientSecret: process.env.FB_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/facebook/secret"
+},
+    function (accessToken, refreshToken, profile, cb) {
+        User.findOrCreate({ facebookId: profile.id }, function (err, user) {
+            console.log("Facebook authentication response:", profile);
             return cb(err, user);
         });
     }
@@ -108,12 +131,26 @@ app.get('/', (req, res) => {
 //to login with google a: /auth/google
 app.get('/auth/google',
     //initiate authentication with google 
-    passport.authenticate('google', { scope: ['profile'] }));//not "local" strategy but "google"
+    passport.authenticate('google', { scope: ['profile', 'email'] }));//not "local" strategy but "google"
 
 
 //to rediect after google authentication
 app.get('/auth/google/secret',
     passport.authenticate('google', { failureRedirect: '/login' }),
+    function (req, res) {
+        // Successful authentication, redirect .
+        res.redirect('/secret');
+    });
+
+//to login with facebook a: /auth/facebook
+app.get('/auth/facebook',
+    //initiate authentication with facebook 
+    passport.authenticate('facebook', { scope: ['profile'] }));//not "local" strategy but "facebook"
+
+
+//to rediect after facebook authentication
+app.get('/auth/facebook/secret',
+    passport.authenticate('facebook', { failureRedirect: '/login' }),
     function (req, res) {
         // Successful authentication, redirect .
         res.redirect('/secret');
@@ -127,16 +164,23 @@ app.get('/login', (req, res) => {
     res.render("login");       //set app.view as ejs
 })
 
+let userFound=[];
 app.get('/secret', (req, res) => {
 
-    //if user is authenticated then
-    if (req.isAuthenticated()) {
-        res.render("secret");       //set app.view as ejs
-    }
-    else {
-        res.redirect('/login');
-    }
-    // IF I AM ALREADY REGISTERED THEN I CAN DIRECTLY RENDER THIS PAGE & DO NOT NEED TO LOGIN AGAIN 
+    User.find({
+        "secret": { $ne: null }    //look thru all users in db then pick users for which secret is not null
+    })
+        .then(function (userFound) {
+            if (userFound) {
+                // if a user is found then
+                res.render("secret",{
+                    usersWithSecrets:userFound,
+                })
+            }
+        })
+        .catch(function (err) {
+            console.error('Error occurred to find such user:', err);
+        });
 });
 
 // to logout:
@@ -151,6 +195,18 @@ app.get('/logout', function (req, res) {
         }
     });
 })
+
+// for submitting route
+app.get("/submit", function (req, res) {
+    // if authenticated user then render submit page
+    if (req.isAuthenticated()) {
+        res.render("submit");
+    }
+    else {
+        res.redirect('/login');
+    }
+
+});
 
 //when submitted form- post request
 app.post('/register', async (req, res) => {
@@ -192,6 +248,34 @@ app.post('/login', async (req, res) => {
         }
     })
 });
+
+//for submitting a secret:
+app.post("/submitSecret", function (req, res) {
+    console.log(`User entered a new secret: ${req.body.userSecret}`);
+    const submittedSecret = req.body.userSecret;
+    console.log(`User: ${req.user}`);
+    console.log(`User id: ${req.user.id}`);
+
+    User.findById(req.user.id)
+        .then(function (userFound) {
+            if (userFound) {
+                // if a user is found then
+                userFound.secret = submittedSecret;
+                userFound.save()
+                    .then(function () {
+                        res.redirect("/secret")
+                    })
+                    .catch(function (err) {
+                        console.error('Error occurred: ', err);
+                    });
+            }
+        })
+        .catch(function (err) {
+            console.error('Error occurred to find such use:', err);
+        });
+
+    //get current user & save his secret 
+})
 
 
 app.listen(port, () => {
