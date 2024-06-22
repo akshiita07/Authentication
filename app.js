@@ -85,6 +85,19 @@ app.get('/secret', (req, res) => {
     // IF I AM ALREADY REGISTERED THEN I CAN DIRECTLY RENDER THIS PAGE & DO NOT NEED TO LOGIN AGAIN 
 });
 
+// to logout:
+app.get('/logout',function(req,res){
+    //deauthenticate user & end user session
+    req.logOut(function(err){
+        if(err){
+            console.log(err);
+        }
+        else{
+            res.redirect('/');  //home page
+        }
+    });
+})
+
 //when submitted form- post request
 app.post('/register', async (req, res) => {
     //render secret page only when registered/login
@@ -126,7 +139,6 @@ app.post('/login', async (req, res) => {
     })
 });
 
-// to logout:
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`)
