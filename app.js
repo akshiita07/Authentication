@@ -24,6 +24,9 @@ import findOrCreate from 'mongoose-findorcreate';
 // npm install passport-facebook
 import FacebookStrategy from 'passport-facebook';
 
+//npm i passport-github2
+import { Strategy as GitHubStrategy } from 'passport-github2';
+
 const app = express();
 const port = 3000;
 
@@ -62,7 +65,7 @@ const userSchema = new mongoose.Schema({
     //we must have id for google authentication
     googleId: String,
     // save secret when user submits a secret
-    secret: String,
+    secret: [String],
 });
 
 //set up passport-local-mongoose as a plugin 👇🏻 to hash & salt passowrd  & save users to mongodb db
@@ -124,6 +127,22 @@ passport.use(new FacebookStrategy({
     }
 ));
 
+// new application can be created at developer applications within GitHub's settings pane
+passport.use(new GitHubStrategy({
+    clientID: process.env.GIT_CLIENT_ID,
+    clientSecret: process.env.GIT_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/github/secret"
+},
+    function (accessToken, refreshToken, profile, done) {
+        User.findOrCreate({ 
+            githubId: profile.id,
+            username: profile.emails[0].value,
+        }, function (err, user) {
+            return done(err, user);
+        });
+    }
+));
+
 app.get('/', (req, res) => {
     res.render("home");       //set app.view as ejs
 })
@@ -156,6 +175,16 @@ app.get('/auth/facebook/secret',
         res.redirect('/secret');
     });
 
+app.get('/auth/github',
+    passport.authenticate('github', { scope: ['profile', 'email'] }));
+
+app.get('/auth/github/secret',
+    passport.authenticate('github', { failureRedirect: '/login' }),
+    function (req, res) {
+        // Successful authentication, redirect home.
+        res.redirect('/secret');
+    });
+
 app.get('/register', (req, res) => {
     res.render("register");       //set app.view as ejs
 })
@@ -164,17 +193,17 @@ app.get('/login', (req, res) => {
     res.render("login");       //set app.view as ejs
 })
 
-let userFound=[];
+let userFound = [];
 app.get('/secret', (req, res) => {
 
     User.find({
-        "secret": { $ne: null }    //look thru all users in db then pick users for which secret is not null
+        "secret": { $ne: [] }    //look thru all users in db then pick users for which secret is not null
     })
         .then(function (userFound) {
             if (userFound) {
                 // if a user is found then
-                res.render("secret",{
-                    usersWithSecrets:userFound,
+                res.render("secret", {
+                    usersWithSecrets: userFound,
                 })
             }
         })
@@ -259,8 +288,8 @@ app.post("/submitSecret", function (req, res) {
     User.findById(req.user.id)
         .then(function (userFound) {
             if (userFound) {
-                // if a user is found then
-                userFound.secret = submittedSecret;
+                // if a user is found then add it to array
+                userFound.secret.push(submittedSecret);
                 userFound.save()
                     .then(function () {
                         res.redirect("/secret")
